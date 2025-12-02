@@ -63,3 +63,73 @@ body {
 .editor-surface {
   min-height: 65vh;
 }
+
+.collab-panel {
+  margin-top: 12px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.collab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.collab-title {
+  font-weight: 700;
+}
+
+.collab-meta {
+  color: #cbd5e1;
+  font-size: 14px;
+}
+
+.collab-help {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.collab-editor {
+  width: 100%;
+  min-height: 140px;
+  border-radius: 10px;
+  border: 1px solid #1e293b;
+  padding: 12px;
+  font-size: 15px;
+  background: #111827;
+  color: #e2e8f0;
+  outline: none;
+}
+
+.collab-editor:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.25);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.pill-connected {
+  background: #22c55e33;
+  color: #4ade80;
+}
+
+.pill-disconnected {
+  background: #f9731633;
+  color: #fb923c;
+}
