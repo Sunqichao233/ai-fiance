@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import './style.css'
-import '@univerjs/ui/dist/style.css'
-import '@univerjs/docs-ui/dist/style.css'
+import '@univerjs/design/lib/index.css'
+import '@univerjs/ui/lib/index.css'
+import '@univerjs/docs-ui/lib/index.css'
 
 import { LocaleType, Univer } from '@univerjs/core'
 import { defaultTheme } from '@univerjs/design'
@@ -10,7 +11,8 @@ import { UniverDocsPlugin } from '@univerjs/docs'
 import { UniverRenderEnginePlugin } from '@univerjs/engine-render'
 import { UniverUIPlugin } from '@univerjs/ui'
 
-import { applyOps, BroadcastPayload, createSocket, Operation } from './collab'
+import { applyOps, createSocket } from './collab'
+import type { BroadcastPayload, Operation } from './collab'
 
 export default function App() {
   const [collabContent, setCollabContent] = useState('')
@@ -80,11 +82,7 @@ export default function App() {
     })
 
     univer.registerPlugin(UniverRenderEnginePlugin)
-    univer.registerPlugin(UniverUIPlugin, {
-      container: editorContainerRef.current,
-      headerToolbar: true,
-      footerToolbar: true,
-    })
+    univer.registerPlugin(UniverUIPlugin, { container: editorContainerRef.current })
     univer.registerPlugin(UniverDocsPlugin)
 
     univer.createUniverDoc({ id: docId, locale: LocaleType.EN_US })

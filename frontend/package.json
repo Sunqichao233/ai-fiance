@@ -21,6 +21,7 @@
     "@univerjs/docs": "^0.12.3",
     "@univerjs/docs-ui": "^0.12.3",
     "@univerjs/engine-render": "^0.12.3",
+    "@univerjs/sheets-ui": "^0.12.3",
     "@univerjs/ui": "^0.12.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
