@@ -1,15 +1,73 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Univer Sheet With Server Start-Kit</title>
   </head>
   <body>
-    <div id="app">
-      <div id="toolbar"></div>
+    <div id="layout">
+      <aside id="sidebar">
+        <div class="sidebar-section account">
+          <div class="section-title">账户信息</div>
+          <div class="account-card">
+            <div class="account-name" id="account-name">示例用户</div>
+            <div class="account-email" id="account-email">user@example.com</div>
+            <button id="account-refresh" class="ghost-btn">刷新信息</button>
+          </div>
+        </div>
 
-      <div id="univer"></div>
+        <div class="sidebar-section logout">
+          <div class="section-title">安全</div>
+          <button id="logout" class="primary-btn full">退出登录</button>
+        </div>
+
+        <div class="sidebar-section chat">
+          <div class="section-title">AI 聊天</div>
+          <p class="section-desc">上传文件、提问，预留了 Agent 请求接口。</p>
+          <button id="open-chat" class="primary-btn full">打开聊天</button>
+        </div>
+      </aside>
+
+      <main id="main-area">
+        <div id="workspace">
+          <div id="sheet-area">
+            <div id="toolbar"></div>
+            <div id="univer"></div>
+          </div>
+
+          <section id="chat-panel" aria-label="AI 聊天">
+            <header class="chat-header">
+              <div>
+                <div class="chat-title">AI 聊天</div>
+                <div class="chat-subtitle">支持上传文件，已预留 Agent 接口</div>
+              </div>
+              <button id="close-chat" class="ghost-btn small">收起</button>
+            </header>
+            <div id="chat-messages" aria-live="polite"></div>
+            <form id="chat-form">
+              <label class="file-label" for="chat-file">
+                <input id="chat-file" type="file" multiple />
+                <span>上传文件 (可多选)</span>
+                <span id="file-names" class="file-names">未选择文件</span>
+              </label>
+              <textarea
+                id="chat-input"
+                name="message"
+                rows="3"
+                placeholder="向 AI 说明你的需求，按 Enter 发送，Shift+Enter 换行"
+              ></textarea>
+              <div class="chat-actions">
+                <label class="ghost-btn small toggle">
+                  <input id="stream-toggle" type="checkbox" checked />
+                  流式响应
+                </label>
+                <button type="submit" class="primary-btn small">发送</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      </main>
     </div>
 
     <script type="module" src="./src/main.ts"></script>
