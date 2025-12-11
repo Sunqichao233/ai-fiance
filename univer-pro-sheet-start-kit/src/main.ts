@@ -108,11 +108,24 @@ function initChat() {
       text: `已发送给 Agent（待接入）：${stream ? '流式' : '非流式'}，文件数 ${files.length} 个。`,
     })
 
+    const assistantNode = appendMessage(messagesEl, { role: 'assistant', text: stream ? '正在生成...' : '' })
+
     try {
-      const reply = await sendToAgent(text, files, stream)
-      appendMessage(messagesEl, { role: 'assistant', text: reply })
+      const reply = await sendToAgent(text, files, stream, (chunk) => {
+        if (assistantNode) {
+          assistantNode.textContent = (assistantNode.textContent || '') + chunk
+        }
+      })
+      if (assistantNode) {
+        assistantNode.textContent = reply
+      }
     } catch (error) {
-      appendMessage(messagesEl, { role: 'system', text: `Agent 调用失败：${String(error)}` })
+      if (assistantNode) {
+        assistantNode.textContent = `Agent 调用失败：${String(error)}`
+        assistantNode.classList.add('system')
+      } else {
+        appendMessage(messagesEl, { role: 'system', text: `Agent 调用失败：${String(error)}` })
+      }
     }
   })
 }
@@ -123,13 +136,133 @@ function appendMessage(container: HTMLElement, message: ChatMessage) {
   el.textContent = message.text
   container.appendChild(el)
   container.scrollTop = container.scrollHeight
+  return el
 }
 
-async function sendToAgent(prompt: string, files: File[], stream: boolean): Promise<string> {
-  // 预留：在此接入你的 Agent/LLM API
-  // 你可以使用 fetch 发送 prompt 和文件到后端，或调用浏览器侧 SDK。
-  // 下面是一个占位实现。
-  await new Promise(resolve => setTimeout(resolve, 400))
-  const fileInfo = files.length ? `，包含文件：${files.map(f => f.name).join('、')}` : ''
-  return `（占位回复）收到你的问题：“${prompt}”，${stream ? '将以流式返回' : '将以整段返回'}${fileInfo}。`
+async function sendToAgent(
+  prompt: string,
+  files: File[],
+  stream: boolean,
+  onToken?: (chunk: string) => void,
+): Promise<string> {
+  // 优先走后端代理（推荐，避免浏览器直连 OpenAI 跨域/泄密）
+  const proxyEndpoint = (import.meta.env.VITE_AGENT_PROXY as string | undefined)?.trim()
+  const apiKey = (import.meta.env.VITE_OPENAI_API_KEY as string | undefined)?.trim() || ''
+  const baseURL = (import.meta.env.VITE_OPENAI_BASE_URL as string | undefined)?.trim() || 'https://api.openai.com/v1'
+  const model = (import.meta.env.VITE_OPENAI_MODEL as string | undefined)?.trim() || 'gpt-4o-mini'
+
+  const isPlaceholder = apiKey === 'sk-xxxx' || apiKey.toLowerCase().includes('your-key')
+
+  // 如果配置了代理，直接调用代理，由后端持有 key 并转发
+  if (proxyEndpoint) {
+    const res = await fetch(proxyEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt,
+        model,
+        stream,
+        fileNames: files.map(f => f.name),
+      }),
+    })
+    if (!res.ok) {
+      const errText = await res.text().catch(() => res.statusText)
+      throw new Error(`代理调用失败：${res.status} ${errText}`)
+    }
+    // 假定代理返回 { text: string } 或纯文本
+    try {
+      const data = await res.json()
+      return data.text ?? JSON.stringify(data)
+    } catch {
+      return await res.text()
+    }
+  }
+
+  // 真实调用示例（前端直连 OpenAI，注意生产环境请改走后端代理以保护密钥；可能遭遇 CORS）
+  if (!apiKey || isPlaceholder) {
+    throw new Error('缺少 VITE_OPENAI_API_KEY，请在项目根目录创建 .env（非 .env.sample）并写入真实 key，重启 dev。示例：VITE_OPENAI_API_KEY=sk-xxxx')
+  }
+
+  console.info('[chat] using OpenAI endpoint:', baseURL, 'model:', model, 'stream:', stream)
+
+  // 可以在这里将文件信息上传到你的后端，再把 file_id 传给模型；此处仅展示文件名。
+  const fileHint = files.length ? `（携带文件：${files.map(f => f.name).join('、')}）` : ''
+
+  const messages = [
+    { role: 'system', content: '你是一个办公助理，善于理解表格需求。' },
+    { role: 'user', content: `${prompt} ${fileHint}` },
+  ]
+
+  if (!stream) {
+    const res = await fetch(`${baseURL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature: 0.3,
+      }),
+    })
+    if (!res.ok) {
+      const errText = await res.text().catch(() => res.statusText)
+      throw new Error(`OpenAI 调用失败：${res.status} ${errText}`)
+    }
+    const data = await res.json()
+    return data.choices?.[0]?.message?.content ?? '（无回复）'
+  }
+
+  const res = await fetch(`${baseURL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature: 0.3,
+      stream: true,
+    }),
+  })
+
+  if (!res.ok || !res.body) {
+    const errText = await res.text().catch(() => res.statusText)
+    throw new Error(`OpenAI 流式调用失败：${res.status} ${errText}`)
+  }
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let fullText = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    const chunk = decoder.decode(value, { stream: true })
+    const lines = chunk.split('\n')
+
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed || !trimmed.startsWith('data:')) continue
+      const dataStr = trimmed.replace(/^data:\s*/, '')
+      if (dataStr === '[DONE]') continue
+      try {
+        const json = JSON.parse(dataStr)
+        const delta = json.choices?.[0]?.delta?.content
+        if (delta) {
+          fullText += delta
+          onToken?.(delta)
+        }
+      } catch {
+        // ignore malformed line
+      }
+    }
+  }
+
+  return fullText || '（无流式内容）'
 }
