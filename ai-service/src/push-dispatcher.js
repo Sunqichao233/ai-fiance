@@ -21,12 +21,15 @@ const dispatchPushes = async (pushes, { webhookUrl, token }) => {
     try {
       const response = await axios.post(
         webhookUrl,
-        {
-          title: push.title,
-          body: push.body,
-          audience: push.audience,
-          sendAt: push.sendAt
-        },
+        Object.assign(
+          {
+            title: push.title,
+            body: push.body,
+            audience: push.audience,
+            sendAt: push.sendAt
+          },
+          push.meta ? { meta: push.meta } : {}
+        ),
         {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined
         }
